@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Дала Мұрасы — Тарихи-археологиялық карта</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+<!-- Fonts (Cyrillic + Latin support) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Philosopher:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Tailwind (extended token system) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          dala: {
+            night:   '#0E2338',
+            deep:    '#123049',
+            steel:   '#1B4B66',
+            mist:    '#5C7A8C',
+            gold:    '#C9A24B',
+            goldlt:  '#E4C878',
+            bronze:  '#7A5230',
+            ivory:   '#F4EEDD'
+          }
+        },
+        fontFamily: {
+          display: ['Philosopher', 'serif'],
+          body: ['Inter', 'sans-serif']
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+/* =========================================================
+   Дала Мұрасы — style.css (SPA нұсқасы)
+   ========================================================= */
+
+:root{
+  --dala-night: #0E2338;
+  --dala-deep:  #123049;
+  --dala-steel: #1B4B66;
+  --dala-mist:  #5C7A8C;
+  --dala-gold:  #C9A24B;
+  --dala-goldlt:#E4C878;
+  --dala-bronze:#7A5230;
+  --dala-ivory: #F4EEDD;
+  --dala-line:  rgba(201,162,75,0.28);
+}
+
+html, body { height: 100%; margin: 0; }
+body{ min-height: 100vh; }
+
+*::-webkit-scrollbar{ width: 7px; height: 7px; }
+*::-webkit-scrollbar-track{ background: transparent; }
+*::-webkit-scrollbar-thumb{ background: var(--dala-line); border-radius: 10px; }
+*::-webkit-scrollbar-thumb:hover{ background: var(--dala-gold); }
+
+.view.hidden{ display: none !important; }
+
+/* =========================================================
+   ОРНАМЕНТ (ornament) элементтері
+   ========================================================= */
+.ornament-edge-right{ position: relative; }
+.ornament-edge-right::after{
+  content: "";
+  position: absolute;
+  top: 0; right: -1px; bottom: 0;
+  width: 10px;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='40' viewBox='0 0 10 40'%3E%3Cpath d='M5 0 C0 5 0 5 5 10 C10 15 10 15 5 20 C0 25 0 25 5 30 C10 35 10 35 5 40' fill='none' stroke='%23C9A24B' stroke-width='1.1' opacity='0.55'/%3E%3C/svg%3E");
+  background-repeat: repeat-y;
+  pointer-events: none;
+}
+
+.ornament-edge-bottom{ position: relative; }
+.ornament-edge-bottom::after{
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 6px;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='6' viewBox='0 0 40 6'%3E%3Cpath d='M0 3 C5 0 5 0 10 3 C15 6 15 6 20 3 C25 0 25 0 30 3 C35 6 35 6 40 3' fill='none' stroke='%23C9A24B' stroke-width='1' opacity='0.5'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  pointer-events: none;
+}
+
+.ornament-frame{ position: relative; }
+.ornament-frame::before,
+.ornament-frame::after{
+  content: "";
+  position: absolute;
+  width: 34px; height: 34px;
+  background-repeat: no-repeat;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'%3E%3Cpath d='M2 2 L2 14 C2 20 8 20 8 14 M2 2 L14 2 C20 2 20 8 14 8' fill='none' stroke='%23C9A24B' stroke-width='1.4' opacity='0.7'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+.ornament-frame::before{ top: -1px; left: -1px; }
+.ornament-frame::after{ bottom: -1px; right: -1px; transform: rotate(180deg); }
+
+.ornament-divider{
+  height: 10px;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='10' viewBox='0 0 60 10'%3E%3Cpath d='M0 5 C7 0 7 0 14 5 C21 10 21 10 28 5 C35 0 35 0 42 5 C49 10 49 10 56 5' fill='none' stroke='%23C9A24B' stroke-width='1' opacity='0.45'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+}
+
+/* =========================================================
+   NAVBAR / TABS
+   ========================================================= */
+.lang-btn{ color: var(--dala-mist); transition: all .15s ease; }
+.lang-btn.active{ background: var(--dala-gold); color: var(--dala-night); }
+.lang-btn:not(.active):hover{ color: var(--dala-goldlt); }
+
+.nav-tab{
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 16px;
+  border-radius: 999px;
+  color: var(--dala-mist);
+  transition: all .15s ease;
+}
+.nav-tab.active{ background: var(--dala-gold); color: var(--dala-night); font-weight: 700; }
+.nav-tab:not(.active):hover{ color: var(--dala-goldlt); }
+
+.nav-tab-mobile{
+  text-align: left;
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--dala-mist);
+  border-bottom: 1px solid var(--dala-line);
+}
+.nav-tab-mobile.active{ color: var(--dala-goldlt); font-weight: 700; }
+
+/* =========================================================
+   SIDEBAR (Map view) — category chips + site cards
+   ========================================================= */
+.cat-chip{
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--dala-line);
+  color: var(--dala-mist);
+  cursor: pointer;
+  transition: all .15s ease;
+  user-select: none;
+  white-space: nowrap;
+  background: transparent;
+}
+.cat-chip.active{ background: var(--dala-gold); border-color: var(--dala-gold); color: var(--dala-night); font-weight: 600; }
+.cat-chip:not(.active):hover{ border-color: var(--dala-gold); color: var(--dala-goldlt); }
+
+.site-card{
+  background: rgba(255,255,255,0.02);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.site-card:hover{ background: rgba(201,162,75,0.08); border-color: var(--dala-line); }
+.site-card .site-cat-dot{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.site-card-title{ font-size: 13px; font-weight: 600; color: var(--dala-ivory); line-height: 1.25; }
+.site-card-sub{ font-size: 11px; color: var(--dala-mist); }
+.empty-state{ text-align:center; color: var(--dala-mist); font-size: 12.5px; padding: 24px 10px; grid-column: 1/-1; }
+
+/* =========================================================
+   MAP MARKERS / CLUSTERS / POPUPS
+   ========================================================= */
+.dala-marker{
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+  border: 2px solid var(--dala-ivory);
+}
+.dala-marker svg{ transform: rotate(45deg); width: 14px; height: 14px; }
+.dala-marker.cat-historical{ background: var(--dala-gold); }
+.dala-marker.cat-archaeology{ background: #8B6B43; }
+.dala-marker.cat-architecture{ background: var(--dala-steel); }
+.dala-marker.cat-nature{ background: #4C7A4C; }
+.dala-marker.cat-museum{ background: #7A3B5E; }
+
+.dala-cluster{
+  background: rgba(14,35,56,0.9);
+  border: 2px solid var(--dala-gold);
+  border-radius: 50%;
+  color: var(--dala-goldlt);
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+}
+
+.leaflet-popup-content-wrapper{
+  background: var(--dala-deep);
+  color: var(--dala-ivory);
+  border-radius: 14px;
+  border: 1px solid var(--dala-line);
+  padding: 0;
+  overflow: hidden;
+}
+.leaflet-popup-content{ margin: 0; width: 250px !important; }
+.leaflet-popup-tip{ background: var(--dala-deep); border: 1px solid var(--dala-line); }
+.leaflet-popup-close-button{ color: var(--dala-goldlt) !important; }
+
+.dala-popup-img{ width: 100%; height: 120px; object-fit: cover; display: block; background: var(--dala-night); }
+.dala-popup-body{ padding: 12px 14px 14px; }
+.dala-popup-cat{ font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--dala-gold); margin-bottom: 4px; }
+.dala-popup-title{ font-family: 'Philosopher', serif; font-size: 16px; color: var(--dala-goldlt); line-height: 1.2; margin-bottom: 6px; }
+.dala-popup-desc{ font-size: 12px; line-height: 1.5; color: #D9D2BF; margin-bottom: 10px; }
+.dala-popup-readmore{
+  display: inline-block; font-size: 11.5px; font-weight: 600;
+  color: var(--dala-night); background: var(--dala-gold);
+  padding: 5px 10px; border-radius: 999px; cursor: pointer;
+}
+.dala-popup-readmore:hover{ background: var(--dala-goldlt); }
+
+.leaflet-container{ background: var(--dala-night); font-family: 'Inter', sans-serif; }
+.leaflet-control-zoom a{ background: var(--dala-deep) !important; color: var(--dala-goldlt) !important; border-color: var(--dala-line) !important; }
+.leaflet-control-zoom a:hover{ background: var(--dala-steel) !important; }
+.leaflet-control-attribution{ background: rgba(14,35,56,0.75) !important; color: var(--dala-mist) !important; }
+.leaflet-control-attribution a{ color: var(--dala-goldlt) !important; }
+
+/* Layer switcher (satellite / relief / dark) — theme-matched */
+.leaflet-control-layers{
+  background: var(--dala-deep) !important;
+  border: 1px solid var(--dala-line) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4) !important;
+  color: var(--dala-ivory) !important;
+}
+.leaflet-control-layers-toggle{
+  background-color: var(--dala-deep) !important;
+  border-radius: 10px !important;
+  width: 34px !important; height: 34px !important;
+}
+.leaflet-control-layers label{ margin-bottom: 4px; font-size: 13px; }
+.leaflet-control-layers-selector{ accent-color: var(--dala-gold); }
+.leaflet-control-layers-separator{ border-top: 1px solid var(--dala-line) !important; }
+.layer-ctl-item{ color: var(--dala-ivory); }
+
+/* =========================================================
+   LIST VIEW — cards grid
+   ========================================================= */
+.site-grid-card{
+  background: var(--dala-deep);
+  border: 1px solid var(--dala-line);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.site-grid-card:hover{ transform: translateY(-3px); border-color: var(--dala-gold); }
+.site-grid-card img{ width: 100%; height: 160px; object-fit: cover; background: var(--dala-night); }
+.site-grid-card .body{ padding: 14px 16px 16px; display: flex; flex-direction: column; flex: 1; }
+.site-grid-card .cat-badge{
+  align-self: flex-start;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+  padding: 3px 9px; border-radius: 999px; font-weight: 700;
+  color: var(--dala-night); margin-bottom: 8px;
+}
+.site-grid-card h3{ font-family: 'Philosopher', serif; font-size: 17px; color: var(--dala-goldlt); margin-bottom: 6px; line-height: 1.25; }
+.site-grid-card p{ font-size: 12.5px; color: var(--dala-mist); line-height: 1.5; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.site-grid-card .readmore-link{ margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--dala-gold); align-self: flex-start; cursor: pointer; }
+.site-grid-card .readmore-link:hover{ color: var(--dala-goldlt); }
+
+/* =========================================================
+   ABOUT VIEW
+   ========================================================= */
+.tech-pill{
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--dala-line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  text-align: center;
+}
+
+/* =========================================================
+   ADMIN — stat cards + table
+   ========================================================= */
+.stat-card{
+  background: var(--dala-deep);
+  border: 1px solid var(--dala-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.stat-card .num{ font-family: 'Philosopher', serif; font-size: 24px; color: var(--dala-goldlt); }
+.stat-card .label{ font-size: 11px; color: var(--dala-mist); margin-top: 2px; }
+
+#adminTableBody tr{ border-bottom: 1px solid var(--dala-line); }
+#adminTableBody tr:last-child{ border-bottom: none; }
+#adminTableBody tr:hover{ background: rgba(201,162,75,0.05); }
+#adminTableBody td{ padding: 10px 16px; vertical-align: middle; }
+.table-cat-badge{
+  font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+  padding: 3px 9px; border-radius: 999px; font-weight: 700; color: var(--dala-night);
+  display: inline-block;
+}
+.table-action-btn{ font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 7px; margin-left: 4px; }
+.table-action-edit{ color: var(--dala-goldlt); border: 1px solid var(--dala-line); }
+.table-action-edit:hover{ background: rgba(201,162,75,0.12); }
+.table-action-delete{ color: #F17A7A; border: 1px solid rgba(241,122,122,0.3); }
+.table-action-delete:hover{ background: rgba(241,122,122,0.12); }
+
+/* =========================================================
+   ADMIN FORM INPUTS
+   ========================================================= */
+.admin-input{
+  width: 100%;
+  background: var(--dala-night);
+  border: 1px solid var(--dala-line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 13px;
+  color: var(--dala-ivory);
+}
+.admin-input:focus{ outline: none; border-color: var(--dala-gold); }
+.admin-input::placeholder{ color: var(--dala-mist); }
+
+/* =========================================================
+   MODALS
+   ========================================================= */
+.modal-close-btn{
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  color: var(--dala-mist);
+}
+.modal-close-btn:hover{ color: var(--dala-gold); }
+
+/* =========================================================
+   TOASTS
+   ========================================================= */
+.toast{
+  background: var(--dala-deep);
+  border: 1px solid var(--dala-line);
+  border-left: 4px solid var(--dala-gold);
+  color: var(--dala-ivory);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  min-width: 220px;
+  max-width: 320px;
+  animation: toast-in .2s ease;
+}
+.toast.error{ border-left-color: #F17A7A; }
+@keyframes toast-in{ from{ opacity:0; transform: translateY(8px);} to{ opacity:1; transform: translateY(0);} }
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (min-width: 768px){
+  #sidebar{ transform: none !important; }
+}
+@media (max-width: 767px){
+  #sidebar.open{ transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+}
+
+</style>
+</head>
+<body class="font-body bg-dala-night text-dala-ivory">
+
+<!-- ===================== TOP NAVBAR ===================== -->
+<header class="ornament-edge-bottom fixed top-0 left-0 right-0 z-[1300] h-16 bg-dala-night/95 backdrop-blur border-b border-dala-line flex items-center justify-between px-3 md:px-6">
+  <div class="flex items-center gap-2.5">
+    <div class="w-9 h-9 shrink-0">
+      <svg viewBox="0 0 40 40" class="w-full h-full">
+        <circle cx="20" cy="20" r="19" fill="none" stroke="#C9A24B" stroke-width="1.5"/>
+        <path d="M20 6c-4 4-4 8 0 8s4 4 0 8-4 8 0 8" fill="none" stroke="#C9A24B" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="leading-tight hidden xs:block">
+      <h1 class="font-display text-lg md:text-xl text-dala-goldlt tracking-wide" data-i18n="app_title">Дала Мұрасы</h1>
+      <p class="hidden sm:block text-[10.5px] text-dala-mist -mt-0.5" data-i18n="app_subtitle">Тарихи-археологиялық карта</p>
+    </div>
+  </div>
+
+  <!-- Desktop nav tabs -->
+  <nav class="hidden md:flex items-center gap-1 bg-dala-deep/60 rounded-full p-1 border border-dala-line">
+    <button class="nav-tab" data-route="map"><span data-i18n="nav_map">Карта</span></button>
+    <button class="nav-tab" data-route="list"><span data-i18n="nav_list">Нысандар</span></button>
+    <button class="nav-tab" data-route="about"><span data-i18n="nav_about">Жоба туралы</span></button>
+    <button class="nav-tab" data-route="admin"><span data-i18n="nav_admin">Әкімші</span></button>
+  </nav>
+
+  <div class="flex items-center gap-2">
+    <div class="flex bg-dala-deep rounded-full p-1 border border-dala-line">
+      <button class="lang-btn px-2.5 py-1 rounded-full text-xs font-semibold" data-lang="kk">ҚАЗ</button>
+      <button class="lang-btn px-2.5 py-1 rounded-full text-xs font-semibold" data-lang="ru">РУС</button>
+      <button class="lang-btn px-2.5 py-1 rounded-full text-xs font-semibold" data-lang="en">ENG</button>
+    </div>
+    <button id="mobileNavToggle" class="md:hidden text-dala-gold p-2" aria-label="Menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile nav drawer -->
+<nav id="mobileNav" class="fixed top-16 left-0 right-0 z-[1250] bg-dala-deep border-b border-dala-line hidden flex-col md:hidden">
+  <button class="nav-tab-mobile" data-route="map" data-i18n="nav_map">Карта</button>
+  <button class="nav-tab-mobile" data-route="list" data-i18n="nav_list">Нысандар</button>
+  <button class="nav-tab-mobile" data-route="about" data-i18n="nav_about">Жоба туралы</button>
+  <button class="nav-tab-mobile" data-route="admin" data-i18n="nav_admin">Әкімші</button>
+</nav>
+
+<!-- ===================== MAIN CONTENT ===================== -->
+<main class="pt-16 min-h-screen">
+
+  <!-- ---------- VIEW: MAP ---------- -->
+  <section id="view-map" class="view relative h-[calc(100vh-4rem)] w-full">
+    <aside id="sidebar" class="ornament-edge-right absolute z-[900] top-0 bottom-0 left-0 w-[320px] max-w-[85vw] bg-dala-deep/97 backdrop-blur border-r border-dala-line -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col">
+      <div class="p-4 border-b border-dala-line">
+        <label class="relative block">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-dala-mist" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="searchInput" type="text" data-i18n-placeholder="search_placeholder" placeholder="Іздеу..."
+            class="w-full bg-dala-night border border-dala-line rounded-lg pl-9 pr-3 py-2 text-sm placeholder:text-dala-mist focus:outline-none focus:ring-1 focus:ring-dala-gold">
+        </label>
+      </div>
+      <div class="px-4 py-3 border-b border-dala-line">
+        <p class="text-[11px] uppercase tracking-wider text-dala-mist mb-2" data-i18n="filter_label">Санат бойынша сүзу</p>
+        <div id="categoryFilters" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="px-4 pt-3 pb-1 text-[11px] text-dala-mist">
+        <span id="resultCount">0</span> <span data-i18n="results_label">нысан табылды</span>
+      </div>
+      <div id="siteList" class="flex-1 overflow-y-auto px-2 py-2 space-y-1.5"></div>
+      <div class="p-3 border-t border-dala-line text-center">
+        <button id="sidebarCollapseBtn" class="md:hidden text-[11px] text-dala-mist hover:text-dala-gold" data-i18n="close_btn">Жабу</button>
+      </div>
+    </aside>
+    <button id="sidebarToggle" class="md:hidden absolute z-[950] top-3 left-3 bg-dala-deep border border-dala-line text-dala-gold rounded-lg p-2 shadow-lg">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div id="sidebarBackdrop" class="absolute inset-0 bg-black/50 z-[880] hidden md:hidden"></div>
+    <div id="map" class="w-full h-full"></div>
+  </section>
+
+  <!-- ---------- VIEW: LIST ---------- -->
+  <section id="view-list" class="view hidden max-w-7xl mx-auto px-4 md:px-8 py-8">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+      <div>
+        <h2 class="font-display text-2xl md:text-3xl text-dala-goldlt" data-i18n="list_title">Нысандар тізімі</h2>
+        <p class="text-sm text-dala-mist mt-1" data-i18n="list_subtitle">Картадағы барлық тарихи-археологиялық нысандар</p>
+      </div>
+      <label class="relative block w-full md:w-72">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-dala-mist" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="listSearchInput" type="text" data-i18n-placeholder="search_placeholder" placeholder="Іздеу..."
+          class="w-full bg-dala-deep border border-dala-line rounded-lg pl-9 pr-3 py-2.5 text-sm placeholder:text-dala-mist focus:outline-none focus:ring-1 focus:ring-dala-gold">
+      </label>
+    </div>
+    <div id="listCategoryFilters" class="flex flex-wrap gap-1.5 mb-6"></div>
+    <div id="cardsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+  </section>
+
+  <!-- ---------- VIEW: ABOUT ---------- -->
+  <section id="view-about" class="view hidden max-w-3xl mx-auto px-4 md:px-8 py-14">
+    <div class="ornament-frame relative bg-dala-deep border border-dala-line rounded-2xl p-8 md:p-10">
+      <h2 class="font-display text-3xl text-dala-goldlt mb-2" data-i18n="about_title">Жоба туралы</h2>
+      <p class="text-sm text-dala-mist mb-6" data-i18n="about_tagline">Дала мұрасын сақтау және таныту жобасы</p>
+
+      <p class="leading-relaxed text-[15px] mb-4" data-i18n="about_p1">
+        «Дала Мұрасы» — Қазақстанның тарихи, археологиялық және мәдени маңызы бар нысандарын интерактивті карта арқылы бір жерге жинақтайтын ашық жоба.
+      </p>
+      <p class="leading-relaxed text-[15px] mb-4" data-i18n="about_p2">
+        Мақсатымыз — ежелгі қалашықтар мен кесенелерден бастап, табиғи ескерткіштер мен мұражайларға дейінгі мұраны цифрлық форматта сақтап, кез келген адамға қолжетімді ету.
+      </p>
+      <p class="leading-relaxed text-[15px] mb-6" data-i18n="about_p3">
+        Жоба ашық түрде дамиды: әркім Әкімші панелі арқылы жаңа деректер қосып, картаны толықтыра алады.
+      </p>
+
+      <div class="ornament-divider my-6"></div>
+
+      <h3 class="font-display text-xl text-dala-goldlt mb-3" data-i18n="about_tech_title">Қолданылған технологиялар</h3>
+      <ul class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm text-dala-mist mb-2">
+        <li class="tech-pill">Leaflet.js</li>
+        <li class="tech-pill">Tailwind CSS</li>
+        <li class="tech-pill">JavaScript (SPA)</li>
+        <li class="tech-pill">OpenStreetMap / CARTO</li>
+        <li class="tech-pill">localStorage</li>
+        <li class="tech-pill">Web Crypto API</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ---------- VIEW: ADMIN ---------- -->
+  <section id="view-admin" class="view hidden max-w-6xl mx-auto px-4 md:px-8 py-10">
+
+    <!-- LOGIN -->
+    <div id="adminLoginView" class="max-w-md mx-auto mt-10">
+      <div class="ornament-frame relative bg-dala-deep border border-dala-line rounded-2xl p-8">
+        <h2 class="font-display text-2xl text-dala-goldlt mb-1" data-i18n="admin_login_title">Әкімші кірісі</h2>
+        <p class="text-sm text-dala-mist mb-5" data-i18n="admin_login_sub">Деректерді басқару үшін кіріңіз</p>
+        <form id="adminLoginForm" class="space-y-3">
+          <input id="adminPassword" type="password" required autocomplete="current-password"
+            data-i18n-placeholder="admin_password_ph" placeholder="Құпия сөз"
+            class="admin-input">
+          <p id="adminLoginError" class="text-xs text-red-400 hidden" data-i18n="admin_login_error">Құпия сөз қате</p>
+          <button type="submit" class="w-full bg-dala-gold hover:bg-dala-goldlt text-dala-night font-semibold rounded-lg py-2.5 text-sm transition-colors" data-i18n="login_btn">Кіру</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="adminPanelView" class="hidden">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 class="font-display text-2xl text-dala-goldlt" data-i18n="admin_panel_title">Деректерді басқару</h2>
+          <p class="text-sm text-dala-mist mt-0.5" data-i18n="admin_panel_sub">Барлық нысандарды қосу, өзгерту және жою</p>
+        </div>
+        <div class="flex gap-2">
+          <button id="addSiteBtn" class="bg-dala-gold hover:bg-dala-goldlt text-dala-night font-semibold rounded-lg px-4 py-2 text-sm transition-colors" data-i18n="add_site_btn">+ Нысанды қосу</button>
+          <button id="adminLogoutBtn" class="border border-dala-line text-dala-mist hover:text-red-400 hover:border-red-400 rounded-lg px-4 py-2 text-sm transition-colors" data-i18n="logout_btn">Шығу</button>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div id="adminStats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6"></div>
+
+      <!-- Table -->
+      <div class="bg-dala-deep border border-dala-line rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-dala-mist text-[11px] uppercase tracking-wider border-b border-dala-line">
+                <th class="px-4 py-3" data-i18n="th_name">Атауы</th>
+                <th class="px-4 py-3" data-i18n="th_category">Санаты</th>
+                <th class="px-4 py-3 hidden sm:table-cell" data-i18n="th_coords">Координаталар</th>
+                <th class="px-4 py-3 text-right" data-i18n="th_actions">Әрекеттер</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===================== SITE FORM MODAL (Add / Edit) ===================== -->
+<div id="siteFormModal" class="fixed inset-0 z-[2000] hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  <div class="ornament-frame relative w-full max-w-lg bg-dala-deep border border-dala-line rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+    <button id="siteFormCloseBtn" class="modal-close-btn" aria-label="Close">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="p-7">
+      <h2 id="siteFormTitle" class="font-display text-2xl text-dala-goldlt mb-5" data-i18n="add_site_btn">Нысанды қосу</h2>
+      <form id="siteForm" class="space-y-3">
+        <input type="hidden" name="id">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input name="name_kk" required data-i18n-placeholder="name_kk_ph" placeholder="Атауы (қаз)" class="admin-input">
+          <input name="name_ru" required data-i18n-placeholder="name_ru_ph" placeholder="Атауы (рус)" class="admin-input">
+          <input name="name_en" required data-i18n-placeholder="name_en_ph" placeholder="Атауы (eng)" class="admin-input">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input name="lat" type="number" step="any" min="-90" max="90" required data-i18n-placeholder="lat_ph" placeholder="Ендік (lat)" class="admin-input">
+          <input name="lng" type="number" step="any" min="-180" max="180" required data-i18n-placeholder="lng_ph" placeholder="Бойлық (lng)" class="admin-input">
+        </div>
+        <select name="category" required class="admin-input">
+          <option value="historical" data-i18n="cat_historical">Тарихи орын</option>
+          <option value="archaeology" data-i18n="cat_archaeology">Археологиялық ескерткіш</option>
+          <option value="architecture" data-i18n="cat_architecture">Сәулет ескерткіші</option>
+          <option value="nature" data-i18n="cat_nature">Табиғат ескерткіші</option>
+          <option value="museum" data-i18n="cat_museum">Мұражай</option>
+        </select>
+        <textarea name="description_kk" required rows="2" data-i18n-placeholder="desc_kk_ph" placeholder="Сипаттама (қаз)" class="admin-input"></textarea>
+        <textarea name="description_ru" required rows="2" data-i18n-placeholder="desc_ru_ph" placeholder="Сипаттама (рус)" class="admin-input"></textarea>
+        <textarea name="description_en" required rows="2" data-i18n-placeholder="desc_en_ph" placeholder="Сипаттама (eng)" class="admin-input"></textarea>
+        <input name="image" type="url" data-i18n-placeholder="image_ph" placeholder="Сурет URL (https://...)" class="admin-input">
+        <p id="formError" class="text-xs text-red-400 hidden"></p>
+        <button type="submit" id="siteFormSubmitBtn" class="w-full bg-dala-gold hover:bg-dala-goldlt text-dala-night font-semibold rounded-lg py-2.5 text-sm transition-colors" data-i18n="save_btn">Сақтау</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SITE DETAIL MODAL (popup / read more) ===================== -->
+<div id="detailModal" class="fixed inset-0 z-[2000] hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  <div class="ornament-frame relative w-full max-w-xl bg-dala-deep border border-dala-line rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+    <button id="detailCloseBtn" class="modal-close-btn" aria-label="Close">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div id="detailImageWrap"></div>
+    <div class="p-6">
+      <div id="detailCategory" class="dala-popup-cat"></div>
+      <h2 id="detailTitle" class="font-display text-2xl text-dala-goldlt mb-3"></h2>
+      <p id="detailDescription" class="text-sm leading-relaxed text-[#D9D2BF] mb-4"></p>
+      <p id="detailCoords" class="text-[11px] font-mono text-dala-mist mb-5"></p>
+      <button id="detailShowOnMapBtn" class="w-full bg-dala-gold hover:bg-dala-goldlt text-dala-night font-semibold rounded-lg py-2.5 text-sm transition-colors" data-i18n="show_on_map_btn">Картадан көру</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CONFIRM MODAL ===================== -->
+<div id="confirmModal" class="fixed inset-0 z-[2100] hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  <div class="relative w-full max-w-sm bg-dala-deep border border-dala-line rounded-2xl shadow-2xl p-6 text-center">
+    <p id="confirmMessage" class="text-sm mb-5"></p>
+    <div class="flex gap-3">
+      <button id="confirmCancelBtn" class="flex-1 border border-dala-line rounded-lg py-2 text-sm text-dala-mist hover:text-dala-ivory" data-i18n="cancel_btn">Болдырмау</button>
+      <button id="confirmOkBtn" class="flex-1 bg-red-500/90 hover:bg-red-500 rounded-lg py-2 text-sm font-semibold" data-i18n="confirm_btn">Растау</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TOASTS ===================== -->
+<div id="toastContainer" class="fixed bottom-4 right-4 z-[2500] flex flex-col gap-2"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+/* =========================================================================
+   Дала Мұрасы — app.js (SPA нұсқасы)
+   Router (hash negizinde) + i18n + localStorage-тегі толық CRUD +
+   Leaflet карта + Тізім (grid) + Жоба туралы + Әкімші дашборды.
+
+   ҚАУІПСІЗДІК ЕСКЕРТУІ: бұл backend-сіз MVP. Құпия сөз тек SHA-256
+   хэші түрінде салыстырылады, қате әрекетке лимит/lockout қойылған,
+   сессияға мерзім берілген, ал localStorage-тен келетін барлық мәтін
+   DOM-ға шығар алдында HTML-экрандалады (XSS-тен қорғау).
+   ========================================================================= */
+
+(() => {
+  "use strict";
+
+  /* ======================= 1. I18N СӨЗДІГІ ======================= */
+  const I18N = {
+    kk: {
+      app_title: "Дала Мұрасы", app_subtitle: "Тарихи-археологиялық карта",
+      nav_map: "Карта", nav_list: "Нысандар", nav_about: "Жоба туралы", nav_admin: "Әкімші",
+      search_placeholder: "Атауы бойынша іздеу...", filter_label: "Санат бойынша сүзу",
+      results_label: "нысан табылды", close_btn: "Жабу",
+      list_title: "Нысандар тізімі", list_subtitle: "Картадағы барлық тарихи-археологиялық нысандар",
+      about_title: "Жоба туралы", about_tagline: "Дала мұрасын сақтау және таныту жобасы",
+      about_p1: "«Дала Мұрасы» — Қазақстанның тарихи, археологиялық және мәдени маңызы бар нысандарын интерактивті карта арқылы бір жерге жинақтайтын ашық жоба.",
+      about_p2: "Мақсатымыз — ежелгі қалашықтар мен кесенелерден бастап, табиғи ескерткіштер мен мұражайларға дейінгі мұраны цифрлық форматта сақтап, кез келген адамға қолжетімді ету.",
+      about_p3: "Жоба ашық түрде дамиды: әркім Әкімші панелі арқылы жаңа деректер қосып, картаны толықтыра алады.",
+      about_tech_title: "Қолданылған технологиялар",
+      admin_login_title: "Әкімші кірісі", admin_login_sub: "Деректерді басқару үшін кіріңіз",
+      admin_password_ph: "Құпия сөз", admin_login_error: "Құпия сөз қате немесе әрекет саны шектелді",
+      login_btn: "Кіру", logout_btn: "Шығу",
+      admin_panel_title: "Деректерді басқару", admin_panel_sub: "Барлық нысандарды қосу, өзгерту және жою",
+      add_site_btn: "+ Нысанды қосу", edit_site_title: "Нысанды өзгерту",
+      save_btn: "Сақтау", cancel_btn: "Болдырмау", confirm_btn: "Растау",
+      name_kk_ph: "Атауы (қаз)", name_ru_ph: "Атауы (рус)", name_en_ph: "Атауы (eng)",
+      lat_ph: "Ендік (lat)", lng_ph: "Бойлық (lng)",
+      desc_kk_ph: "Сипаттама (қаз)", desc_ru_ph: "Сипаттама (рус)", desc_en_ph: "Сипаттама (eng)",
+      image_ph: "Сурет URL (https://...)",
+      cat_historical: "Тарихи орын", cat_archaeology: "Археологиялық ескерткіш",
+      cat_architecture: "Сәулет ескерткіші", cat_nature: "Табиғат ескерткіші", cat_museum: "Мұражай",
+      th_name: "Атауы", th_category: "Санаты", th_coords: "Координаталар", th_actions: "Әрекеттер",
+      no_results: "Нәтиже табылмады", delete_btn: "Жою", edit_btn: "Өзгерту",
+      confirm_delete_msg: "Осы нысанды жоюды растайсыз ба? Бұл әрекетті кері қайтару мүмкін емес.",
+      form_error_fields: "Барлық міндетті өрістерді дұрыс толтырыңыз",
+      form_error_coords: "Координаталар қате: lat -90..90, lng -180..180",
+      form_error_image: "Сурет сілтемесі жарамсыз (http/https болуы керек)",
+      toast_site_added: "Нысан сәтті қосылды", toast_site_updated: "Нысан сәтті жаңартылды",
+      toast_site_deleted: "Нысан жойылды",
+      show_on_map_btn: "Картадан көру", readmore_btn: "Толығырақ оқу",
+      stat_total: "Барлығы"
+    },
+    ru: {
+      app_title: "Дала Мұрасы", app_subtitle: "Историко-археологическая карта",
+      nav_map: "Карта", nav_list: "Объекты", nav_about: "О проекте", nav_admin: "Админ",
+      search_placeholder: "Поиск по названию...", filter_label: "Фильтр по категории",
+      results_label: "объектов найдено", close_btn: "Закрыть",
+      list_title: "Список объектов", list_subtitle: "Все историко-археологические объекты на карте",
+      about_title: "О проекте", about_tagline: "Проект сохранения и популяризации наследия степи",
+      about_p1: "«Дала Мұрасы» — открытый проект, объединяющий на интерактивной карте исторически, археологически и культурно значимые объекты Казахстана.",
+      about_p2: "Наша цель — сохранить в цифровом формате наследие от древних городищ и мавзолеев до природных памятников и музеев, сделав его доступным каждому.",
+      about_p3: "Проект развивается открыто: любой пользователь может дополнить карту новыми данными через панель администратора.",
+      about_tech_title: "Используемые технологии",
+      admin_login_title: "Вход администратора", admin_login_sub: "Войдите, чтобы управлять данными",
+      admin_password_ph: "Пароль", admin_login_error: "Неверный пароль или превышен лимит попыток",
+      login_btn: "Войти", logout_btn: "Выйти",
+      admin_panel_title: "Управление данными", admin_panel_sub: "Добавление, редактирование и удаление объектов",
+      add_site_btn: "+ Добавить объект", edit_site_title: "Редактировать объект",
+      save_btn: "Сохранить", cancel_btn: "Отмена", confirm_btn: "Подтвердить",
+      name_kk_ph: "Название (каз)", name_ru_ph: "Название (рус)", name_en_ph: "Название (eng)",
+      lat_ph: "Широта (lat)", lng_ph: "Долгота (lng)",
+      desc_kk_ph: "Описание (каз)", desc_ru_ph: "Описание (рус)", desc_en_ph: "Описание (eng)",
+      image_ph: "Ссылка на фото (https://...)",
+      cat_historical: "Исторический объект", cat_archaeology: "Археологический памятник",
+      cat_architecture: "Памятник архитектуры", cat_nature: "Природный памятник", cat_museum: "Музей",
+      th_name: "Название", th_category: "Категория", th_coords: "Координаты", th_actions: "Действия",
+      no_results: "Ничего не найдено", delete_btn: "Удалить", edit_btn: "Изменить",
+      confirm_delete_msg: "Подтвердите удаление объекта. Это действие необратимо.",
+      form_error_fields: "Заполните все обязательные поля корректно",
+      form_error_coords: "Неверные координаты: lat -90..90, lng -180..180",
+      form_error_image: "Некорректная ссылка на изображение (нужен http/https)",
+      toast_site_added: "Объект успешно добавлен", toast_site_updated: "Объект успешно обновлён",
+      toast_site_deleted: "Объект удалён",
+      show_on_map_btn: "Показать на карте", readmore_btn: "Читать полностью",
+      stat_total: "Всего"
+    },
+    en: {
+      app_title: "Dala Mūrasy", app_subtitle: "Historical & Archaeological Map",
+      nav_map: "Map", nav_list: "Sites", nav_about: "About", nav_admin: "Admin",
+      search_placeholder: "Search by name...", filter_label: "Filter by category",
+      results_label: "sites found", close_btn: "Close",
+      list_title: "Sites List", list_subtitle: "All historical and archaeological sites on the map",
+      about_title: "About the project", about_tagline: "A project to preserve and showcase steppe heritage",
+      about_p1: "'Dala Mūrasy' is an open project bringing together historically, archaeologically and culturally significant sites of Kazakhstan on one interactive map.",
+      about_p2: "Our goal is to digitally preserve this heritage — from ancient settlements and mausoleums to natural monuments and museums — and make it accessible to everyone.",
+      about_p3: "The project grows openly: anyone can add new data through the Admin panel to expand the map.",
+      about_tech_title: "Technologies used",
+      admin_login_title: "Admin sign-in", admin_login_sub: "Sign in to manage the map data",
+      admin_password_ph: "Password", admin_login_error: "Wrong password or too many attempts",
+      login_btn: "Sign in", logout_btn: "Log out",
+      admin_panel_title: "Manage data", admin_panel_sub: "Add, edit and delete sites",
+      add_site_btn: "+ Add site", edit_site_title: "Edit site",
+      save_btn: "Save", cancel_btn: "Cancel", confirm_btn: "Confirm",
+      name_kk_ph: "Name (kk)", name_ru_ph: "Name (ru)", name_en_ph: "Name (en)",
+      lat_ph: "Latitude", lng_ph: "Longitude",
+      desc_kk_ph: "Description (kk)", desc_ru_ph: "Description (ru)", desc_en_ph: "Description (en)",
+      image_ph: "Image URL (https://...)",
+      cat_historical: "Historical site", cat_archaeology: "Archaeological monument",
+      cat_architecture: "Architectural monument", cat_nature: "Natural monument", cat_museum: "Museum",
+      th_name: "Name", th_category: "Category", th_coords: "Coordinates", th_actions: "Actions",
+      no_results: "No results found", delete_btn: "Delete", edit_btn: "Edit",
+      confirm_delete_msg: "Are you sure you want to delete this site? This cannot be undone.",
+      form_error_fields: "Please fill in all required fields correctly",
+      form_error_coords: "Invalid coordinates: lat -90..90, lng -180..180",
+      form_error_image: "Invalid image URL (must be http/https)",
+      toast_site_added: "Site added successfully", toast_site_updated: "Site updated successfully",
+      toast_site_deleted: "Site deleted",
+      show_on_map_btn: "View on map", readmore_btn: "Read more",
+      stat_total: "Total"
+    }
+  };
+
+  /* ======================= 2. САНАТТАР ======================= */
+  const CATEGORY_COLORS = {
+    historical:   "#C9A24B",
+    archaeology:  "#8B6B43",
+    architecture: "#1B4B66",
+    nature:       "#4C7A4C",
+    museum:       "#7A3B5E"
+  };
+  const CATEGORY_ORDER = Object.keys(CATEGORY_COLORS);
+  const CATEGORY_ICONS = {
+    historical:   '<svg viewBox="0 0 24 24" fill="none" stroke="#0E2338" stroke-width="2"><path d="M12 2l2 5 5 .6-3.8 3.5 1 5.3L12 14l-4.2 2.4 1-5.3L5 7.6 10 7z"/></svg>',
+    archaeology:  '<svg viewBox="0 0 24 24" fill="none" stroke="#0E2338" stroke-width="2"><path d="M3 20c2-9 6-13 9-13s7 4 9 13"/><line x1="3" y1="20" x2="21" y2="20"/></svg>',
+    architecture: '<svg viewBox="0 0 24 24" fill="none" stroke="#0E2338" stroke-width="2"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-8h6v8"/></svg>',
+    nature:       '<svg viewBox="0 0 24 24" fill="none" stroke="#0E2338" stroke-width="2"><path d="M12 2 5 14h4l-3 6h12l-3-6h4z"/></svg>',
+    museum:       '<svg viewBox="0 0 24 24" fill="none" stroke="#0E2338" stroke-width="2"><rect x="4" y="10" width="4" height="10"/><rect x="10" y="6" width="4" height="14"/><rect x="16" y="12" width="4" height="8"/></svg>'
+  };
+
+  /* ======================= 3. БАСТАПҚЫ ДЕРЕКТЕР (seed) ======================= */
+  const DEFAULT_SITES = [
+    { id: "yasawi", category: "architecture", lat: 43.2975, lng: 68.2517,
+      name: { kk: "Қожа Ахмет Ясауи кесенесі", ru: "Мавзолей Ходжи Ахмеда Ясави", en: "Mausoleum of Khoja Ahmed Yasawi" },
+      description: {
+        kk: "Түркістан қаласындағы, Әмір Темірдің бұйрығымен XIV ғасырда салынған сопы Ахмет Ясауи құрметіне арналған кесене. ЮНЕСКО-ның Бүкіләлемдік мұра тізіміне енген.",
+        ru: "Мавзолей в городе Туркестан, построенный по приказу Амира Тимура в XIV веке в честь суфия Ахмеда Ясави. Входит в список Всемирного наследия ЮНЕСКО.",
+        en: "A 14th-century mausoleum in Turkistan built on the order of Amir Timur in honour of the Sufi master Ahmed Yasawi. A UNESCO World Heritage Site."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Yasawi_Mausoleum_2.jpg/640px-Yasawi_Mausoleum_2.jpg" },
+    { id: "otrar", category: "archaeology", lat: 42.8858, lng: 68.3103,
+      name: { kk: "Отырар қалашығы", ru: "Городище Отрар", en: "Otrar Ancient Settlement" },
+      description: {
+        kk: "Ұлы Жібек жолындағы ірі сауда-мәдени орталықтардың бірі болған ежелгі қала. Әл-Фараби осы жерде дүниеге келген деп есептеледі.",
+        ru: "Один из крупнейших торгово-культурных центров на Великом шёлковом пути. Считается родиной аль-Фараби.",
+        en: "One of the great trade and cultural centres on the Silk Road, believed to be the birthplace of al-Farabi."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Otrar_ruins.jpg/640px-Otrar_ruins.jpg" },
+    { id: "sauran", category: "archaeology", lat: 43.1667, lng: 68.1167,
+      name: { kk: "Сауран қалашығы", ru: "Городище Сауран", en: "Sauran Ancient Settlement" },
+      description: {
+        kk: "Ортағасырлық қорғаныс қабырғалары жақсы сақталған ежелгі қала, бір кездері Ақ Орданың астанасы болған.",
+        ru: "Древний город с хорошо сохранившимися средневековыми крепостными стенами, некогда столица Ак-Орды.",
+        en: "An ancient city with well-preserved medieval fortress walls, once the capital of the Ak Orda (White Horde)."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Sauran2.jpg/640px-Sauran2.jpg" },
+    { id: "berel", category: "archaeology", lat: 49.2333, lng: 86.4167,
+      name: { kk: "Берел қорымы", ru: "Некрополь Берел", en: "Berel Burial Ground" },
+      description: {
+        kk: "Шығыс Қазақстандағы скиф-сақ дәуірінің «мұзды обалары» — көне көшпелілердің көму дәстүрін зерттеуге мүмкіндік беретін бірегей ескерткіш.",
+        ru: "«Ледяные курганы» скифо-сакской эпохи в Восточном Казахстане — уникальный памятник погребальной культуры древних кочевников.",
+        en: "The Scythian-Saka era 'ice kurgans' of East Kazakhstan — a unique monument to the burial traditions of ancient nomads."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Berel_kurgan.jpg/640px-Berel_kurgan.jpg" },
+    { id: "besshatyr", category: "archaeology", lat: 43.6167, lng: 78.6167,
+      name: { kk: "Бесшатыр обалары", ru: "Курганы Бесшатыр", en: "Besshatyr Kurgans" },
+      description: {
+        kk: "Іле алқабындағы сақ дәуірінің патша обаларынан тұратын некрополь, ежелгі көшпелі ақсүйектердің жерлеу орны.",
+        ru: "Некрополь царских курганов сакской эпохи в долине реки Или — место погребения древней кочевой знати.",
+        en: "A necropolis of royal Saka-era kurgans in the Ili valley, burial site of ancient nomadic nobility."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Besshatyr_kurgans.jpg/640px-Besshatyr_kurgans.jpg" },
+    { id: "tamgaly", category: "archaeology", lat: 43.7333, lng: 75.8667,
+      name: { kk: "Таңбалы петроглифтері", ru: "Петроглифы Тамгалы", en: "Tamgaly Petroglyphs" },
+      description: {
+        kk: "Қола дәуірінен бастап салынған мыңдаған жартас суреттері бар сарқырама, ЮНЕСКО тізіміндегі ескерткіш.",
+        ru: "Ущелье с тысячами наскальных рисунков, начиная с бронзового века. Памятник в списке ЮНЕСКО.",
+        en: "A gorge with thousands of rock carvings dating from the Bronze Age onward. A UNESCO-listed monument."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Tamgaly_petroglyphs.jpg/640px-Tamgaly_petroglyphs.jpg" },
+    { id: "sarayshyk", category: "archaeology", lat: 47.1181, lng: 51.8894,
+      name: { kk: "Сарайшық қалашығы", ru: "Городище Сарайшык", en: "Sarayshyk Settlement" },
+      description: {
+        kk: "Жайық өзені бойындағы, Алтын Орда дәуірінде астана болған ежелгі сауда қаласы.",
+        ru: "Древний торговый город на реке Урал, бывший одной из столиц Золотой Орды.",
+        en: "An ancient trading city on the Ural River, once one of the capitals of the Golden Horde."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Sarayshyk.jpg/640px-Sarayshyk.jpg" },
+    { id: "botai", category: "archaeology", lat: 53.0964, lng: 68.8908,
+      name: { kk: "Ботай қонысы", ru: "Поселение Ботай", en: "Botai Settlement" },
+      description: {
+        kk: "Солтүстік Қазақстандағы энеолит дәуірінің қонысы, жылқыны алғаш қолға үйрету дәлелдері табылған әлемдегі ең маңызды археологиялық орындардың бірі.",
+        ru: "Поселение эпохи энеолита на севере Казахстана, одно из важнейших мест в мире, где найдены свидетельства древнейшего одомашнивания лошади.",
+        en: "An Eneolithic-era settlement in northern Kazakhstan, one of the world's key sites for evidence of the earliest horse domestication."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Botai_horse.jpg/640px-Botai_horse.jpg" },
+    { id: "aishabibi", category: "architecture", lat: 42.8494, lng: 71.2531,
+      name: { kk: "Айша бибі кесенесі", ru: "Мавзолей Айша-биби", en: "Aisha-Bibi Mausoleum" },
+      description: {
+        kk: "Тараз маңындағы, XI-XII ғасырларда салынған, ою-өрнекті терракота кірпіштерімен әшекейленген бірегей кесене.",
+        ru: "Уникальный мавзолей XI–XII веков близ Тараза, украшенный резными терракотовыми кирпичами с растительным орнаментом.",
+        en: "A unique 11th–12th century mausoleum near Taraz, decorated with intricately carved terracotta bricks."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Aisha_bibi_mausoleum.jpg/640px-Aisha_bibi_mausoleum.jpg" },
+    { id: "karakhan", category: "architecture", lat: 42.8946, lng: 71.3644,
+      name: { kk: "Қарахан кесенесі", ru: "Мавзолей Карахана", en: "Karakhan Mausoleum" },
+      description: {
+        kk: "Тараз қаласындағы қарахандар әулетінің өкіліне арналған ортағасырлық кесене.",
+        ru: "Средневековый мавзолей в городе Тараз, посвящённый представителю династии Караханидов.",
+        en: "A medieval mausoleum in the city of Taraz dedicated to a ruler of the Karakhanid dynasty."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Karakhan_mausoleum.jpg/640px-Karakhan_mausoleum.jpg" },
+    { id: "ulytau", category: "architecture", lat: 48.7167, lng: 66.7167,
+      name: { kk: "Жошы хан кесенесі (Ұлытау)", ru: "Мавзолей Джучи-хана (Улытау)", en: "Jochi Khan Mausoleum (Ulytau)" },
+      description: {
+        kk: "Ұлытау өңіріндегі, Шыңғыс ханның үлкен ұлы Жошы ханға арналған XIII ғасырдағы кесене — қазақ хандығы тарихындағы киелі орындардың бірі.",
+        ru: "Мавзолей XIII века в регионе Улытау, посвящённый Джучи-хану, старшему сыну Чингисхана — одно из священных мест истории казахской государственности.",
+        en: "A 13th-century mausoleum in the Ulytau region dedicated to Jochi Khan, Genghis Khan's eldest son — a site sacred to Kazakh statehood."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Jochi_Khan_mausoleum.jpg/640px-Jochi_Khan_mausoleum.jpg" },
+    { id: "merke", category: "archaeology", lat: 42.8500, lng: 73.5000,
+      name: { kk: "Мерке петроглифтері", ru: "Петроглифы Мерке", en: "Merke Petroglyphs" },
+      description: {
+        kk: "Жамбыл облысындағы қола және түркі дәуірлеріне жататын жартас суреттері шоғырланған алқап.",
+        ru: "Скопление наскальных рисунков бронзового и тюркского периодов в Жамбылской области.",
+        en: "A cluster of rock carvings from the Bronze Age and Turkic periods in the Zhambyl region."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Petroglyphs_Kazakhstan.jpg/640px-Petroglyphs_Kazakhstan.jpg" },
+    { id: "talgar", category: "archaeology", lat: 43.3040, lng: 77.2430,
+      name: { kk: "Талғар (Тальхиз) қалашығы", ru: "Городище Талгар (Тальхиз)", en: "Talgar (Talkhiz) Settlement" },
+      description: {
+        kk: "Іле алқабындағы Ұлы Жібек жолының тармағында орналасқан, X–XIII ғасырларда гүлденген ортағасырлық қала қалдықтары.",
+        ru: "Руины средневекового города X–XIII веков, процветавшего на ответвлении Великого шёлкового пути в долине реки Или.",
+        en: "The ruins of a medieval city that flourished from the 10th–13th centuries on a branch of the Silk Road in the Ili valley."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Talgar_settlement.jpg/640px-Talgar_settlement.jpg" },
+    { id: "charyn", category: "nature", lat: 43.3500, lng: 79.0667,
+      name: { kk: "Шарын каньоны", ru: "Каньон Чарын", en: "Charyn Canyon" },
+      description: {
+        kk: "Миллиондаған жыл бойы қалыптасқан, «Оң тәрткен қалалар алқабы» деп аталатын бірегей жартас мүсіндерімен танымал табиғи ескерткіш.",
+        ru: "Уникальный природный памятник с причудливыми скальными формациями, известными как «Долина замков», формировавшимися миллионы лет.",
+        en: "A unique natural monument famous for its striking rock formations known as the 'Valley of Castles', shaped over millions of years."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Charyn_Canyon.jpg/640px-Charyn_Canyon.jpg" },
+    { id: "kolsai", category: "nature", lat: 42.9667, lng: 78.3667,
+      name: { kk: "Кольсай көлдері", ru: "Кольсайские озёра", en: "Kolsai Lakes" },
+      description: {
+        kk: "Тянь-Шань тауларының баурайында орналасқан, «Қазақстанның Швейцариясы» деп аталатын үш тау көлінің тізбегі.",
+        ru: "Цепь из трёх горных озёр у подножия Тянь-Шаня, известная как «Казахстанская Швейцария».",
+        en: "A chain of three mountain lakes at the foot of the Tian Shan range, often called 'Kazakhstan's Switzerland'."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Kolsai_Lake.jpg/640px-Kolsai_Lake.jpg" },
+    { id: "csmuseum", category: "museum", lat: 43.2389, lng: 76.9454,
+      name: { kk: "Орталық мемлекеттік мұражай", ru: "Центральный государственный музей", en: "Central State Museum" },
+      description: {
+        kk: "Алматы қаласындағы, елдің тарихы мен мәдениетін бейнелейтін ең ірі мұражайлардың бірі.",
+        ru: "Один из крупнейших музеев страны в Алматы, отражающий историю и культуру Казахстана.",
+        en: "One of the country's largest museums, located in Almaty, showcasing the history and culture of Kazakhstan."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Central_State_Museum_Almaty.jpg/640px-Central_State_Museum_Almaty.jpg" },
+    { id: "baikonur", category: "historical", lat: 45.9646, lng: 63.3052,
+      name: { kk: "Байқоңыр ғарыш айлағы", ru: "Космодром Байконур", en: "Baikonur Cosmodrome" },
+      description: {
+        kk: "Әлемдегі алғашқы және ең ірі ғарыш айлағы, Юрий Гагариннің алғашқы ғарыш ұшуы осы жерден 1961 жылы басталған.",
+        ru: "Первый и крупнейший в мире космодром, откуда в 1961 году стартовал первый полёт человека в космос — Юрия Гагарина.",
+        en: "The world's first and largest space launch facility, from which Yuri Gagarin made the first human spaceflight in 1961."
+      }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Baikonur_Cosmodrome.jpg/640px-Baikonur_Cosmodrome.jpg" }
+  ];
+
+  /* ======================= 4. ҚАУІПСІЗДІК КӨМЕКШІЛЕРІ ======================= */
+  function esc(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+  function isValidHttpUrl(value) {
+    if (!value) return true;
+    try { const u = new URL(value); return u.protocol === "http:" || u.protocol === "https:"; }
+    catch { return false; }
+  }
+  function isValidLat(v){ return Number.isFinite(v) && v >= -90 && v <= 90; }
+  function isValidLng(v){ return Number.isFinite(v) && v >= -180 && v <= 180; }
+  async function sha256Hex(text) {
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  // Дефолт құпия сөз: "Dala2026!" (осы хэш соған сәйкес келеді). Ауыстыру үшін
+  // консольде crypto.subtle.digest('SHA-256', new TextEncoder().encode('ЖаңаҚұпияСөз'))
+  // есептеп, төмендегі жолды алмастырыңыз.
+  const ADMIN_PASSWORD_HASH = "59e027635d1df225db8224ef7b00c06483f6edcc28935c30bfb7676be52177f3";
+  const LOCK_KEY = "dala_admin_lock_v1";
+  const SESSION_KEY = "dala_admin_session_v1";
+  const MAX_ATTEMPTS = 5;
+  const LOCK_DURATION_MS = 60 * 1000;
+  const SESSION_DURATION_MS = 30 * 60 * 1000;
+
+  function getLockState() {
+    try { return JSON.parse(localStorage.getItem(LOCK_KEY)) || { attempts: 0, lockUntil: 0 }; }
+    catch { return { attempts: 0, lockUntil: 0 }; }
+  }
+  function setLockState(s) { localStorage.setItem(LOCK_KEY, JSON.stringify(s)); }
+  function isLocked() { return Date.now() < getLockState().lockUntil; }
+  function registerFailedAttempt() {
+    const s = getLockState();
+    s.attempts += 1;
+    if (s.attempts >= MAX_ATTEMPTS) { s.lockUntil = Date.now() + LOCK_DURATION_MS; s.attempts = 0; }
+    setLockState(s);
+  }
+  function resetLockState() { setLockState({ attempts: 0, lockUntil: 0 }); }
+  function hasValidSession() { return Date.now() < Number(sessionStorage.getItem(SESSION_KEY) || 0); }
+  function startSession() { sessionStorage.setItem(SESSION_KEY, String(Date.now() + SESSION_DURATION_MS)); }
+  function clearSession() { sessionStorage.removeItem(SESSION_KEY); }
+
+  /* ======================= 5. ДЕРЕКТЕР ҚОЙМАСЫ (localStorage CRUD) ======================= */
+  const SITES_KEY = "dala_sites_v2";
+
+  function seedIfEmpty() {
+    if (localStorage.getItem(SITES_KEY) === null) {
+      localStorage.setItem(SITES_KEY, JSON.stringify(DEFAULT_SITES));
+    }
+  }
+  function loadSites() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SITES_KEY)) || [];
+      return raw.filter(s =>
+        s && typeof s.id === "string" &&
+        isValidLat(Number(s.lat)) && isValidLng(Number(s.lng)) &&
+        s.category in CATEGORY_COLORS
+      );
+    } catch { return []; }
+  }
+  function saveSites(list) { localStorage.setItem(SITES_KEY, JSON.stringify(list)); }
+  function getSiteById(id) { return loadSites().find(s => s.id === id) || null; }
+  function upsertSite(site) {
+    const list = loadSites();
+    const idx = list.findIndex(s => s.id === site.id);
+    if (idx >= 0) list[idx] = site; else list.push(site);
+    saveSites(list);
+  }
+  function deleteSite(id) { saveSites(loadSites().filter(s => s.id !== id)); }
+
+  /* ======================= 6. КҮЙ (STATE) ======================= */
+  const state = {
+    lang: localStorage.getItem("dala_lang") || "kk",
+    route: "map",
+    map: null, clusterGroup: null, markerIndex: new Map(),
+    mapSearch: "", mapCategories: new Set(CATEGORY_ORDER),
+    listSearch: "", listCategories: new Set(CATEGORY_ORDER),
+    editingId: null
+  };
+  function t(key) { return (I18N[state.lang] && I18N[state.lang][key]) || I18N.kk[key] || key; }
+
+  /* ======================= 7. I18N ЖАСАУ ======================= */
+  function applyTranslations() {
+    document.documentElement.lang = state.lang;
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder"))); });
+    document.querySelectorAll(".lang-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.lang === state.lang));
+  }
+  function setLang(lang) {
+    state.lang = lang;
+    localStorage.setItem("dala_lang", lang);
+    applyTranslations();
+    renderCurrentRoute();
+  }
+
+  /* ======================= 8. ROUTER ======================= */
+  const ROUTES = ["map", "list", "about", "admin"];
+  function navigate(route) {
+    if (!ROUTES.includes(route)) route = "map";
+    window.location.hash = route;
+  }
+  function renderCurrentRoute() {
+    const route = (window.location.hash || "#map").replace("#", "");
+    state.route = ROUTES.includes(route) ? route : "map";
+
+    ROUTES.forEach(r => document.getElementById("view-" + r).classList.toggle("hidden", r !== state.route));
+    document.querySelectorAll(".nav-tab, .nav-tab-mobile").forEach(btn =>
+      btn.classList.toggle("active", btn.dataset.route === state.route)
+    );
+    document.getElementById("mobileNav").classList.add("hidden");
+
+    if (state.route === "map") {
+      renderMapMarkers(); renderMapSidebarList();
+      setTimeout(() => state.map && state.map.invalidateSize(), 50);
+    } else if (state.route === "list") {
+      renderListFilters(); renderCardsGrid();
+    } else if (state.route === "admin") {
+      if (hasValidSession()) showAdminPanel(); else showAdminLogin();
+    }
+  }
+
+  /* ======================= 9. КАРТА ======================= */
+  function initMap() {
+    state.map = L.map("map", { zoomControl: true, minZoom: 3, maxZoom: 18 }).setView([48.0196, 66.9237], 5);
+
+    const darkLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: "abcd", maxZoom: 19
+    });
+    const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics', maxZoom: 19
+    });
+    const terrainLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Style: &copy; OpenTopoMap', subdomains: "abc", maxZoom: 17
+    });
+
+    darkLayer.addTo(state.map);
+
+    const baseLayers = {
+      '<span class="layer-ctl-item">🌙 Қараңғы</span>': darkLayer,
+      '<span class="layer-ctl-item">🛰️ Спутник</span>': satelliteLayer,
+      '<span class="layer-ctl-item">⛰️ Рельеф</span>': terrainLayer
+    };
+    L.control.layers(baseLayers, null, { position: "topright", collapsed: true }).addTo(state.map);
+
+    L.control.scale({ imperial: false, position: "bottomleft" }).addTo(state.map);
+
+    const LocateControl = L.Control.extend({
+      options: { position: "topleft" },
+      onAdd: function () {
+        const el = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+        const btn = L.DomUtil.create("a", "", el);
+        btn.href = "#"; btn.title = "Locate me";
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E4C878" stroke-width="2" style="margin:7px"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+        L.DomEvent.on(btn, "click", e => {
+          L.DomEvent.stop(e);
+          if (!navigator.geolocation) return;
+          navigator.geolocation.getCurrentPosition(pos => state.map.setView([pos.coords.latitude, pos.coords.longitude], 10), () => {});
+        });
+        return el;
+      }
+    });
+    new LocateControl().addTo(state.map);
+
+    state.clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      iconCreateFunction: cluster => {
+        const count = cluster.getChildCount();
+        const size = count < 10 ? 34 : count < 50 ? 42 : 50;
+        return L.divIcon({ html: `<div class="dala-cluster">${count}</div>`, className: "", iconSize: [size, size] });
+      }
+    });
+    state.map.addLayer(state.clusterGroup);
+  }
+
+  function makeIcon(category) {
+    const svg = CATEGORY_ICONS[category] || CATEGORY_ICONS.historical;
+    return L.divIcon({
+      html: `<div class="dala-marker cat-${category}">${svg}</div>`,
+      className: "", iconSize: [30, 30], iconAnchor: [15, 29], popupAnchor: [0, -28]
+    });
+  }
+
+  function popupHTML(site) {
+    const name = esc(site.name[state.lang] || site.name.kk);
+    const desc = esc(site.description[state.lang] || site.description.kk);
+    const cat = esc(t("cat_" + site.category));
+    const img = isValidHttpUrl(site.image) && site.image
+      ? `<img class="dala-popup-img" src="${esc(site.image)}" alt="${name}" onerror="this.style.display='none'">` : "";
+    const shortDesc = desc.length > 90 ? desc.slice(0, 90) + "…" : desc;
+    return `
+      ${img}
+      <div class="dala-popup-body">
+        <div class="dala-popup-cat">${cat}</div>
+        <div class="dala-popup-title">${name}</div>
+        <div class="dala-popup-desc">${shortDesc}</div>
+        <span class="dala-popup-readmore" onclick="window.__dalaOpenDetail('${esc(site.id)}')">${esc(t("readmore_btn"))}</span>
+      </div>`;
+  }
+
+  function filterList(list, search, categories) {
+    const q = search.trim().toLowerCase();
+    return list.filter(site => {
+      if (!categories.has(site.category)) return false;
+      if (!q) return true;
+      const name = (site.name[state.lang] || site.name.kk || "").toLowerCase();
+      const desc = (site.description[state.lang] || site.description.kk || "").toLowerCase();
+      return name.includes(q) || desc.includes(q);
+    });
+  }
+
+  function renderMapMarkers() {
+    if (!state.clusterGroup) return;
+    state.clusterGroup.clearLayers();
+    state.markerIndex.clear();
+    const sites = filterList(loadSites(), state.mapSearch, state.mapCategories);
+    sites.forEach(site => {
+      const marker = L.marker([site.lat, site.lng], { icon: makeIcon(site.category) });
+      marker.bindPopup(popupHTML(site));
+      state.clusterGroup.addLayer(marker);
+      state.markerIndex.set(site.id, { marker, site });
+    });
+  }
+
+  function renderCategoryChips(containerId, activeSet, onChange) {
+    const wrap = document.getElementById(containerId);
+    wrap.innerHTML = "";
+    CATEGORY_ORDER.forEach(cat => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "cat-chip" + (activeSet.has(cat) ? " active" : "");
+      chip.textContent = t("cat_" + cat);
+      chip.addEventListener("click", () => {
+        if (activeSet.has(cat)) activeSet.delete(cat); else activeSet.add(cat);
+        onChange();
+      });
+      wrap.appendChild(chip);
+    });
+    const resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.className = "cat-chip";
+    resetBtn.style.cssText = "color:#E4C878;border-style:dashed";
+    resetBtn.textContent = "↺";
+    resetBtn.addEventListener("click", () => {
+      CATEGORY_ORDER.forEach(c => activeSet.add(c));
+      onChange(true);
+    });
+    wrap.appendChild(resetBtn);
+  }
+
+  function renderMapSidebarList() {
+    renderCategoryChips("categoryFilters", state.mapCategories, (reset) => {
+      if (reset) document.getElementById("searchInput").value = state.mapSearch = "";
+      renderMapMarkers(); renderMapSidebarList();
+    });
+    const list = document.getElementById("siteList");
+    const sites = filterList(loadSites(), state.mapSearch, state.mapCategories);
+    document.getElementById("resultCount").textContent = String(sites.length);
+    if (sites.length === 0) { list.innerHTML = `<div class="empty-state">${esc(t("no_results"))}</div>`; return; }
+    list.innerHTML = sites.map(site => `
+      <div class="site-card flex items-start gap-2.5" data-id="${esc(site.id)}">
+        <span class="site-cat-dot mt-1.5" style="background:${CATEGORY_COLORS[site.category]}"></span>
+        <div>
+          <div class="site-card-title">${esc(site.name[state.lang] || site.name.kk)}</div>
+          <div class="site-card-sub">${esc(t("cat_" + site.category))}</div>
+        </div>
+      </div>`).join("");
+    list.querySelectorAll(".site-card").forEach(card => {
+      card.addEventListener("click", () => {
+        const entry = state.markerIndex.get(card.dataset.id);
+        if (!entry) return;
+        state.map.setView(entry.marker.getLatLng(), 12, { animate: true });
+        state.clusterGroup.zoomToShowLayer(entry.marker, () => entry.marker.openPopup());
+        if (window.innerWidth < 768) closeSidebar();
+      });
+    });
+  }
+
+  function openSidebar() { document.getElementById("sidebar").classList.add("open"); document.getElementById("sidebarBackdrop").classList.remove("hidden"); }
+  function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("sidebarBackdrop").classList.add("hidden"); }
+
+  /* ======================= 10. ТІЗІМ БЕТІ (List view — cards grid) ======================= */
+  function renderListFilters() {
+    renderCategoryChips("listCategoryFilters", state.listCategories, (reset) => {
+      if (reset) document.getElementById("listSearchInput").value = state.listSearch = "";
+      renderListFilters(); renderCardsGrid();
+    });
+  }
+  function renderCardsGrid() {
+    const grid = document.getElementById("cardsGrid");
+    const sites = filterList(loadSites(), state.listSearch, state.listCategories);
+    if (sites.length === 0) { grid.innerHTML = `<div class="empty-state">${esc(t("no_results"))}</div>`; return; }
+    grid.innerHTML = sites.map(site => {
+      const name = esc(site.name[state.lang] || site.name.kk);
+      const desc = esc(site.description[state.lang] || site.description.kk);
+      const color = CATEGORY_COLORS[site.category];
+      const img = isValidHttpUrl(site.image) && site.image
+        ? `<img src="${esc(site.image)}" alt="${name}" onerror="this.style.display='none'">`
+        : `<div style="height:160px;background:var(--dala-night)"></div>`;
+      return `
+        <div class="site-grid-card" data-id="${esc(site.id)}">
+          ${img}
+          <div class="body">
+            <span class="cat-badge" style="background:${color}">${esc(t("cat_" + site.category))}</span>
+            <h3>${name}</h3>
+            <p>${desc}</p>
+            <span class="readmore-link" data-id="${esc(site.id)}">${esc(t("readmore_btn"))} →</span>
+          </div>
+        </div>`;
+    }).join("");
+    grid.querySelectorAll(".readmore-link").forEach(el =>
+      el.addEventListener("click", () => openDetailModal(getSiteById(el.dataset.id)))
+    );
+  }
+
+  /* ======================= 11. DETAIL MODAL (толық ақпарат) ======================= */
+  function openDetailModal(site) {
+    if (!site) return;
+    const name = esc(site.name[state.lang] || site.name.kk);
+    const desc = esc(site.description[state.lang] || site.description.kk);
+    const imgWrap = document.getElementById("detailImageWrap");
+    imgWrap.innerHTML = isValidHttpUrl(site.image) && site.image
+      ? `<img class="dala-popup-img" style="height:220px" src="${esc(site.image)}" alt="${name}" onerror="this.parentElement.innerHTML=''">`
+      : "";
+    document.getElementById("detailCategory").textContent = t("cat_" + site.category);
+    document.getElementById("detailTitle").textContent = name.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#039;/g,"'");
+    document.getElementById("detailDescription").textContent = desc.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#039;/g,"'");
+    document.getElementById("detailCoords").textContent = `${site.lat.toFixed(4)}, ${site.lng.toFixed(4)}`;
+    document.getElementById("detailShowOnMapBtn").onclick = () => {
+      closeModal("detailModal");
+      navigate("map");
+      setTimeout(() => {
+        const entry = state.markerIndex.get(site.id);
+        state.map.invalidateSize();
+        if (entry) {
+          state.map.setView(entry.marker.getLatLng(), 12, { animate: true });
+          state.clusterGroup.zoomToShowLayer(entry.marker, () => entry.marker.openPopup());
+        } else {
+          state.map.setView([site.lat, site.lng], 12);
+        }
+      }, 80);
+    };
+    openModal("detailModal");
+  }
+  // Popup ішіндегі "Толығырақ оқу" батырмасынан шақыру үшін ашық функция
+  window.__dalaOpenDetail = (id) => openDetailModal(getSiteById(id));
+
+  /* ======================= 12. ГЕНЕРИКАЛЫҚ MODAL / TOAST КӨМЕКШІЛЕРІ ======================= */
+  function openModal(id) { const m = document.getElementById(id); m.classList.remove("hidden"); m.classList.add("flex"); }
+  function closeModal(id) { const m = document.getElementById(id); m.classList.add("hidden"); m.classList.remove("flex"); }
+
+  let confirmResolve = null;
+  function askConfirm(message) {
+    document.getElementById("confirmMessage").textContent = message;
+    openModal("confirmModal");
+    return new Promise(resolve => { confirmResolve = resolve; });
+  }
+  function bindConfirmModal() {
+    document.getElementById("confirmOkBtn").addEventListener("click", () => { closeModal("confirmModal"); if (confirmResolve) confirmResolve(true); });
+    document.getElementById("confirmCancelBtn").addEventListener("click", () => { closeModal("confirmModal"); if (confirmResolve) confirmResolve(false); });
+  }
+
+  function toast(message, type = "success") {
+    const container = document.getElementById("toastContainer");
+    const el = document.createElement("div");
+    el.className = "toast" + (type === "error" ? " error" : "");
+    el.textContent = message;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  /* ======================= 13. ӘКІМШІ ДАШБОРДЫ ======================= */
+  function showAdminLogin() {
+    document.getElementById("adminLoginView").classList.remove("hidden");
+    document.getElementById("adminPanelView").classList.add("hidden");
+  }
+  function showAdminPanel() {
+    document.getElementById("adminLoginView").classList.add("hidden");
+    document.getElementById("adminPanelView").classList.remove("hidden");
+    renderAdminStats(); renderAdminTable();
+  }
+
+  async function handleAdminLogin(e) {
+    e.preventDefault();
+    const errEl = document.getElementById("adminLoginError");
+    errEl.classList.add("hidden");
+    if (isLocked()) {
+      const secondsLeft = Math.ceil((getLockState().lockUntil - Date.now()) / 1000);
+      errEl.textContent = t("admin_login_error") + ` (${secondsLeft}s)`;
+      errEl.classList.remove("hidden");
+      return;
+    }
+    const pass = document.getElementById("adminPassword").value;
+    const hash = await sha256Hex(pass);
+    if (hash === ADMIN_PASSWORD_HASH) {
+      resetLockState(); startSession();
+      document.getElementById("adminPassword").value = "";
+      showAdminPanel();
+    } else {
+      registerFailedAttempt();
+      errEl.textContent = t("admin_login_error");
+      errEl.classList.remove("hidden");
+    }
+  }
+  function handleAdminLogout() { clearSession(); showAdminLogin(); }
+
+  function renderAdminStats() {
+    const sites = loadSites();
+    const wrap = document.getElementById("adminStats");
+    const cards = [{ key: "total", label: t("stat_total"), count: sites.length, color: "#C9A24B" }]
+      .concat(CATEGORY_ORDER.map(cat => ({
+        key: cat, label: t("cat_" + cat),
+        count: sites.filter(s => s.category === cat).length,
+        color: CATEGORY_COLORS[cat]
+      })));
+    wrap.innerHTML = cards.map(c => `
+      <div class="stat-card">
+        <div class="num" style="color:${c.color}">${c.count}</div>
+        <div class="label">${esc(c.label)}</div>
+      </div>`).join("");
+  }
+
+  function renderAdminTable() {
+    const sites = loadSites();
+    const body = document.getElementById("adminTableBody");
+    if (sites.length === 0) {
+      body.innerHTML = `<tr><td colspan="4" class="empty-state">${esc(t("no_results"))}</td></tr>`;
+      return;
+    }
+    body.innerHTML = sites.map(site => `
+      <tr>
+        <td class="font-medium">${esc(site.name[state.lang] || site.name.kk)}</td>
+        <td><span class="table-cat-badge" style="background:${CATEGORY_COLORS[site.category]}">${esc(t("cat_" + site.category))}</span></td>
+        <td class="hidden sm:table-cell font-mono text-xs text-dala-mist">${site.lat.toFixed(4)}, ${site.lng.toFixed(4)}</td>
+        <td class="text-right whitespace-nowrap">
+          <button class="table-action-btn table-action-edit" data-edit="${esc(site.id)}">${esc(t("edit_btn"))}</button>
+          <button class="table-action-btn table-action-delete" data-del="${esc(site.id)}">${esc(t("delete_btn"))}</button>
+        </td>
+      </tr>`).join("");
+
+    body.querySelectorAll("[data-edit]").forEach(btn =>
+      btn.addEventListener("click", () => openSiteFormModal("edit", getSiteById(btn.dataset.edit)))
+    );
+    body.querySelectorAll("[data-del]").forEach(btn =>
+      btn.addEventListener("click", async () => {
+        const ok = await askConfirm(t("confirm_delete_msg"));
+        if (!ok) return;
+        deleteSite(btn.dataset.del);
+        renderAdminStats(); renderAdminTable();
+        renderMapMarkers(); renderMapSidebarList();
+        toast(t("toast_site_deleted"));
+      })
+    );
+  }
+
+  /* ======================= 14. ADD / EDIT FORM MODAL ======================= */
+  function openSiteFormModal(mode, site) {
+    const form = document.getElementById("siteForm");
+    form.reset();
+    document.getElementById("formError").classList.add("hidden");
+    state.editingId = null;
+
+    if (mode === "edit" && site) {
+      state.editingId = site.id;
+      form.elements["id"].value = site.id;
+      form.elements["name_kk"].value = site.name.kk || "";
+      form.elements["name_ru"].value = site.name.ru || "";
+      form.elements["name_en"].value = site.name.en || "";
+      form.elements["lat"].value = site.lat;
+      form.elements["lng"].value = site.lng;
+      form.elements["category"].value = site.category;
+      form.elements["description_kk"].value = site.description.kk || "";
+      form.elements["description_ru"].value = site.description.ru || "";
+      form.elements["description_en"].value = site.description.en || "";
+      form.elements["image"].value = site.image || "";
+      document.getElementById("siteFormTitle").textContent = t("edit_site_title");
+      document.getElementById("siteFormSubmitBtn").textContent = t("save_btn");
+    } else {
+      form.elements["id"].value = "";
+      document.getElementById("siteFormTitle").textContent = t("add_site_btn").replace("+ ", "");
+      document.getElementById("siteFormSubmitBtn").textContent = t("save_btn");
+    }
+    openModal("siteFormModal");
+  }
+  function closeSiteFormModal() { closeModal("siteFormModal"); state.editingId = null; }
+
+  function handleSiteFormSubmit(e) {
+    e.preventDefault();
+    if (!hasValidSession()) { showAdminLogin(); return; }
+    const errEl = document.getElementById("formError");
+    errEl.classList.add("hidden");
+    const form = e.target;
+    const fd = new FormData(form);
+
+    const name = { kk: fd.get("name_kk").trim(), ru: fd.get("name_ru").trim(), en: fd.get("name_en").trim() };
+    const description = { kk: fd.get("description_kk").trim(), ru: fd.get("description_ru").trim(), en: fd.get("description_en").trim() };
+    const lat = parseFloat(fd.get("lat"));
+    const lng = parseFloat(fd.get("lng"));
+    const category = fd.get("category");
+    const image = fd.get("image").trim();
+    const existingId = fd.get("id");
+
+    if (!name.kk || !name.ru || !name.en || !description.kk || !description.ru || !description.en || !(category in CATEGORY_COLORS)) {
+      errEl.textContent = t("form_error_fields"); errEl.classList.remove("hidden"); return;
+    }
+    if (!isValidLat(lat) || !isValidLng(lng)) {
+      errEl.textContent = t("form_error_coords"); errEl.classList.remove("hidden"); return;
+    }
+    if (image && !isValidHttpUrl(image)) {
+      errEl.textContent = t("form_error_image"); errEl.classList.remove("hidden"); return;
+    }
+
+    const isEdit = !!existingId;
+    const site = {
+      id: existingId || (crypto.randomUUID ? crypto.randomUUID() : "site-" + Date.now() + "-" + Math.random().toString(36).slice(2)),
+      category, lat, lng, name, description, image: image || ""
+    };
+    upsertSite(site);
+
+    closeSiteFormModal();
+    renderAdminStats(); renderAdminTable();
+    renderMapMarkers(); renderMapSidebarList();
+    toast(isEdit ? t("toast_site_updated") : t("toast_site_added"));
+  }
+
+  /* ======================= 15. ОҚИҒАЛАРДЫ БАЙЛАУ ======================= */
+  function bindEvents() {
+    document.querySelectorAll(".lang-btn").forEach(btn => btn.addEventListener("click", () => setLang(btn.dataset.lang)));
+
+    document.querySelectorAll(".nav-tab, .nav-tab-mobile").forEach(btn =>
+      btn.addEventListener("click", () => navigate(btn.dataset.route))
+    );
+    document.getElementById("mobileNavToggle").addEventListener("click", () => {
+      document.getElementById("mobileNav").classList.toggle("hidden");
+    });
+    window.addEventListener("hashchange", renderCurrentRoute);
+
+    document.getElementById("sidebarToggle").addEventListener("click", openSidebar);
+    document.getElementById("sidebarBackdrop").addEventListener("click", closeSidebar);
+    document.getElementById("sidebarCollapseBtn").addEventListener("click", closeSidebar);
+
+    document.getElementById("searchInput").addEventListener("input", e => {
+      state.mapSearch = e.target.value; renderMapMarkers(); renderMapSidebarList();
+    });
+    document.getElementById("listSearchInput").addEventListener("input", e => {
+      state.listSearch = e.target.value; renderCardsGrid();
+    });
+
+    document.getElementById("adminLoginForm").addEventListener("submit", handleAdminLogin);
+    document.getElementById("adminLogoutBtn").addEventListener("click", handleAdminLogout);
+    document.getElementById("addSiteBtn").addEventListener("click", () => openSiteFormModal("add"));
+    document.getElementById("siteForm").addEventListener("submit", handleSiteFormSubmit);
+    document.getElementById("siteFormCloseBtn").addEventListener("click", closeSiteFormModal);
+    document.getElementById("siteFormModal").addEventListener("click", e => { if (e.target.id === "siteFormModal") closeSiteFormModal(); });
+
+    document.getElementById("detailCloseBtn").addEventListener("click", () => closeModal("detailModal"));
+    document.getElementById("detailModal").addEventListener("click", e => { if (e.target.id === "detailModal") closeModal("detailModal"); });
+
+    bindConfirmModal();
+  }
+
+  /* ======================= 16. БАСТАУ (INIT) ======================= */
+  document.addEventListener("DOMContentLoaded", () => {
+    seedIfEmpty();
+    initMap();
+    applyTranslations();
+    bindEvents();
+    if (!window.location.hash) window.location.hash = "map";
+    renderCurrentRoute();
+  });
+})();
+
+</script>
+</body>
+</html>
